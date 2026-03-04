@@ -1,0 +1,31 @@
+Command: ninja all
+[1/10] Performing build step for 'bootloader'
+[1/1] cd /root/ota-portal/build/bootloader && /root/.espressif/python_env/idf6.1_py3.12_env/bin/python /root/esp-idf-latest/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /root/ota-portal/build/bootloader/bootloader.bin
+Bootloader binary size 0x57e0 bytes. 0x2820 bytes (31%) free.
+[2/10] No install step for 'bootloader'
+[3/10] cd /root/ota-portal/build && /root/ota-portal/build/littlefs_py_venv/bin/littlefs-python create /root/ota-portal/data /root/ota-portal/build/www.bin -v --fs-size=0x200000 --name-max=64 --block-size=4096
+LittleFS Configuration:
+  Block Size:       4096  /  0x1000
+  Image Size:    2097152  /  0x200000
+  Block Count:       512
+  Name Max:           64
+  Image:       /root/ota-portal/build/www.bin
+Adding File:      vite.svg
+Adding Directory: assets
+Adding File:      index.html
+Adding File:      assets/background-BseBNIn9.jpg
+Adding File:      assets/index-CsP0nOyT.css
+Adding File:      assets/index-Dx8O-qIc.js
+[4/10] Completed 'bootloader'
+[5/10] Building C object esp-idf/bluetooth_service/CMakeFiles/__idf_bluetooth_service.dir/bluetooth_service.c.obj
+[6/10] Linking C static library esp-idf/bluetooth_service/libbluetooth_service.a
+[7/10] Generating esp-idf/esp_system/ld/sections.ld
+[8/10] Linking CXX executable ota-portal.elf
+[9/10] Generating binary image from built executable
+esptool v5.2.0
+Creating ESP32-S3 image...
+Merged 3 ELF sections.
+Successfully created ESP32-S3 image.
+Generated /root/ota-portal/build/ota-portal.bin
+[10/10] cd /root/ota-portal/build && /root/.espressif/python_env/idf6.1_py3.12_env/bin/python /root/esp-idf-latest/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /root/ota-portal/build/partition_table/partition-table.bin /root/ota-portal/build/ota-portal.bin
+ota-portal.bin binary size 0x135230 bytes. Smallest app partition is 0x380000 bytes. 0x24add0 bytes (65%) free.

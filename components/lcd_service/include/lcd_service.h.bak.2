@@ -1,0 +1,19 @@
+#pragma once
+
+#include "hd44780.h"
+#include "esp_err.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern hd44780_t lcd;
+
+esp_err_t lcd_init(void);
+void lcd_clear_screen(void);
+void lcd_print(const char *msg);
+void lcd_print_xy(uint8_t col, uint8_t row, const char *msg);
+
+#ifdef __cplusplus
+}
+#endif

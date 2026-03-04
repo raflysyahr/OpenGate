@@ -1,0 +1,145 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_err.h"
+#include "driver/i2c.h"
+#include "rom/ets_sys.h"
+
+/* ================= CONFIG ================= */
+
+#define LCD_I2C_ADDR   0x27
+
+#define LCD_BACKLIGHT  0x10   // P4
+#define LCD_ENABLE     0x20   // P5
+#define LCD_RW         0x40   // P6
+#define LCD_RS         0x80   // P7
+
+#define I2C_TIMEOUT_MS 1000
+
+/* ================= STRUCT ================= */
+
+typedef struct {
+    i2c_port_t port;
+} lcd1602_t;
+
+/* ================= LOW LEVEL ================= */
+
+static esp_err_t lcd_write_byte(lcd1602_t *lcd, uint8_t data)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (LCD_I2C_ADDR << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, data & ~LCD_RW, true);  // RW always LOW
+    i2c_master_stop(cmd);
+
+    esp_err_t ret = i2c_master_cmd_begin(
+        lcd->port, cmd, pdMS_TO_TICKS(I2C_TIMEOUT_MS)
+    );
+
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+static void lcd_pulse(lcd1602_t *lcd, uint8_t data)
+{
+    lcd_write_byte(lcd, data | LCD_ENABLE);
+    ets_delay_us(1);
+    lcd_write_byte(lcd, data & ~LCD_ENABLE);
+    ets_delay_us(50);
+}
+
+static void lcd_send_nibble(lcd1602_t *lcd, uint8_t nibble, uint8_t mode)
+{
+    uint8_t data = (nibble & 0x0F) | LCD_BACKLIGHT | mode;
+    lcd_pulse(lcd, data);
+}
+
+static void lcd_send_byte(lcd1602_t *lcd, uint8_t val, uint8_t mode)
+{
+    lcd_send_nibble(lcd, val >> 4, mode);
+    lcd_send_nibble(lcd, val & 0x0F, mode);
+}
+
+static inline void lcd_cmd(lcd1602_t *lcd, uint8_t cmd)
+{
+    lcd_send_byte(lcd, cmd, 0);
+}
+
+static inline void lcd_data(lcd1602_t *lcd, uint8_t data)
+{
+    lcd_send_byte(lcd, data, LCD_RS);
+}
+
+/* ================= PUBLIC API ================= */
+
+esp_err_t lcd1602_init(lcd1602_t *lcd, i2c_port_t port,
+                       gpio_num_t sda, gpio_num_t scl)
+{
+    lcd->port = port;
+
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = sda,
+        .scl_io_num = scl,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000
+    };
+
+    ESP_ERROR_CHECK(i2c_param_config(port, &conf));
+    ESP_ERROR_CHECK(i2c_driver_install(port, conf.mode, 0, 0, 0));
+
+    vTaskDelay(pdMS_TO_TICKS(50));
+
+    /* Init HD44780 4-bit mode */
+    lcd_send_nibble(lcd, 0x03, 0);
+    vTaskDelay(pdMS_TO_TICKS(5));
+    lcd_send_nibble(lcd, 0x03, 0);
+    ets_delay_us(150);
+    lcd_send_nibble(lcd, 0x03, 0);
+    lcd_send_nibble(lcd, 0x02, 0);
+
+    lcd_cmd(lcd, 0x28);  // 4-bit, 2 line, 5x8 font
+    lcd_cmd(lcd, 0x08);  // display off
+    lcd_cmd(lcd, 0x01);  // clear
+    vTaskDelay(pdMS_TO_TICKS(3));
+    lcd_cmd(lcd, 0x06);  // entry mode
+    lcd_cmd(lcd, 0x0C);  // display on
+
+    return ESP_OK;
+}
+
+void lcd1602_clear(lcd1602_t *lcd)
+{
+    lcd_cmd(lcd, 0x01);
+    vTaskDelay(pdMS_TO_TICKS(3));
+}
+
+void lcd1602_set_cursor(lcd1602_t *lcd, uint8_t col, uint8_t row)
+{
+    static const uint8_t row_offsets[] = {0x00, 0x40};
+    lcd_cmd(lcd, 0x80 | (col + row_offsets[row & 1]));
+}
+
+void lcd1602_write_char(lcd1602_t *lcd, char c)
+{
+    lcd_data(lcd, (uint8_t)c);
+}
+
+void lcd1602_write_string(lcd1602_t *lcd, const char *str)
+{
+    while (*str) {
+        lcd_data(lcd, (uint8_t)*str++);
+    }
+}
+
+/* ================= RAW TEST ================= */
+
+void lcd_raw_test(lcd1602_t *lcd)
+{
+    for (int i = 0; i < 256; i++) {
+        lcd_write_byte(lcd, i);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}

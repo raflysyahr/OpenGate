@@ -1,0 +1,119 @@
+#include "lcd_service.h"
+
+#include "i2cdev.h"
+#include "pcf8574.h"
+#include "esp_log.h"
+
+#define TAG "LCD_SERVICE"
+
+#define SDA_PIN GPIO_NUM_4
+#define SCL_PIN GPIO_NUM_5
+#define LCD_ADDR 0x27
+
+static i2c_dev_t pcf8574_dev;
+//hd44780_t lcd;
+
+/* write callback */
+/** static int lcd_write_cb(const hd44780_t *lcd, uint8_t data)
+{
+    return pcf8574_port_write((i2c_dev_t *)lcd->io_handle, data);
+}**/
+
+
+/* Mapping bit PCF8574 -> pin LCD */
+#define PIN_RS  4
+#define PIN_RW  5
+#define PIN_E   6
+#define PIN_BL  7
+#define PIN_D4  0
+#define PIN_D5  1
+#define PIN_D6  2
+#define PIN_D7  3
+
+static esp_err_t lcd_write_cb(const hd44780_t *lcd, uint8_t data)
+{
+   
+    data |= (1 << PIN_BL);   
+    return pcf8574_port_write(&pcf8574_dev, data);
+}
+
+
+static esp_err_t lcd_gpio_write(uint8_t data)
+{
+    return pcf8574_port_write(&pcf8574_dev, data);
+}
+
+hd44780_t lcd = {
+    .write_cb = lcd_write_cb,
+    .pins = {
+        .rs = PIN_RS,
+       // .rw = PIN_RW,
+        .e  = PIN_E,
+        .d4 = PIN_D4,
+        .d5 = PIN_D5,
+        .d6 = PIN_D6,
+        .d7 = PIN_D7,
+    },
+    .backlight = PIN_BL,
+    .font = HD44780_FONT_5X8,
+    .lines = 2
+};
+
+esp_err_t lcd_init(void)
+{
+    ESP_LOGI(TAG, "LCD init...");
+
+    
+    ESP_ERROR_CHECK(i2cdev_init());
+
+    ESP_ERROR_CHECK(pcf8574_init_desc(
+        &pcf8574_dev,
+        LCD_ADDR,
+        I2C_NUM_0,
+        SDA_PIN,
+        SCL_PIN
+    ));
+    
+    
+
+  
+
+    ESP_ERROR_CHECK(hd44780_init(&lcd));
+    
+    
+    /*lcd.font      = HD44780_FONT_5X8;
+    lcd.lines     = 2;
+    
+    ESP_ERROR_CHECK(
+        hd44780_init_i2cdev(&lcd, &pcf8574_dev, 16, 2)
+    );*/
+
+    hd44780_clear(&lcd);
+
+    ESP_LOGI(TAG, "LCD ready");
+
+    return ESP_OK;
+}
+
+void lcd_clear_screen(void)
+{
+    hd44780_clear(&lcd);
+}
+
+void lcd_print(const char *msg)
+{
+    if (!msg) return;
+
+    hd44780_clear(&lcd);
+    hd44780_gotoxy(&lcd, 0, 0);
+    hd44780_puts(&lcd, msg);
+    ESP_LOGI(TAG, "Print Str => %s",msg);
+}
+
+void lcd_print_xy(uint8_t col, uint8_t row, const char *msg)
+{
+    if (!msg) return;
+
+    hd44780_gotoxy(&lcd, col, row);
+    hd44780_puts(&lcd, msg);
+}

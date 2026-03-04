@@ -1,0 +1,12 @@
+#!/bin/bash
+
+
+echo "removing old firmware..."
+rm ./ota-portal.bin
+
+echo "copying new firmware..."
+cp ../build/ota-portal.bin ./
+
+
+echo "========== RUNNING SÉRVER =========="
+python3 server.py
