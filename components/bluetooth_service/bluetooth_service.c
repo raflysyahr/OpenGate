@@ -293,7 +293,7 @@ void ble_service_init(void)
     ble_svc_gap_init();
     ble_svc_gatt_init();
 
-    ble_svc_gap_device_name_set("ESP32_IOT");
+    ble_svc_gap_device_name_set("ESP32S3_01");
 
     ble_gatts_count_cfg(gatt_svcs);
     ble_gatts_add_svcs(gatt_svcs);
