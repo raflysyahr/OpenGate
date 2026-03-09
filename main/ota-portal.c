@@ -12,6 +12,7 @@
 #include "web_server_service.h"
 #include "lcd_service.h"
 #include "bluetooth_service.h"
+#include "esp_app_desc.h"
 
 static const char *TAG = "MAIN";
 
@@ -20,6 +21,11 @@ static const char *TAG = "MAIN";
 void app_main(void)
 {
 
+
+    const esp_app_desc_t *app_desc = esp_app_get_description();
+
+    printf("Project: %s\n", app_desc->project_name);
+    printf("Version: %s\n", app_desc->version);
     
     ESP_LOGI(TAG, "===============================================");
     ESP_LOGI(TAG, ">>> OTA PORTAL                              <<<");
